@@ -1,0 +1,132 @@
+// Sentinel.AI — Prisma Schema
+// BetterAuth models (user, session, account, verification)
+// + SOC models (log, alert, agentLog, payment)
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ========================
+// BetterAuth Models
+// ========================
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  role          Role      @default(USER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  sessions Session[]
+  accounts Account[]
+  payments Payment[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  userId                String
+  providerId            String
+  accountId             String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// ========================
+// SOC Models
+// ========================
+
+model Log {
+  id        String   @id @default(cuid())
+  source    String
+  message   String
+  ip        String?
+  user      String?
+  eventType String?
+  timestamp DateTime
+  createdAt DateTime @default(now())
+
+  alerts Alert[]
+}
+
+model Alert {
+  id          String   @id @default(cuid())
+  logId       String
+  threatType  String
+  severity    String
+  riskScore   Float
+  actionTaken String
+  explanation String?
+  createdAt   DateTime @default(now())
+
+  log Log @relation(fields: [logId], references: [id], onDelete: Cascade)
+}
+
+model AgentLog {
+  id        String   @id @default(cuid())
+  agentName String
+  version   String
+  input     Json
+  output    Json
+  success   Boolean
+  latencyMs Int
+  createdAt DateTime @default(now())
+}
+
+model Payment {
+  id        String   @id @default(cuid())
+  userId    String
+  plan      String
+  amount    Float
+  status    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ========================
+// Enums
+// ========================
+
+enum Role {
+  ADMIN
+  USER
+}
